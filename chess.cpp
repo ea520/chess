@@ -1,4 +1,4 @@
-#include "chess.h"
+#include "chess.hpp"
 bool in_board(int8_t x, int8_t y)
 {
     return x <= 8 && x >= 1 && y <= 8 && y >= 1;

@@ -1,5 +1,5 @@
 #include <GL/glew.h>
-#include "rendering.h"
+#include "rendering.hpp"
 // Shader sources
 const GLchar *vertexSource = R"glsl(
     #version 330 core

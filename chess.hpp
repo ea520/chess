@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <memory>
 #include <algorithm>
-#include "rendering.h"
+#include "rendering.hpp"
 #include "stb_image.h"
 struct coordinate_t
 {

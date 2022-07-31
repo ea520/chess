@@ -4,8 +4,8 @@
 #include <array>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include "rendering.h"
-#include "chess.h"
+#include "rendering.hpp"
+#include "chess.hpp"
 constexpr int width = 1000;
 constexpr int height = width;
 std::vector<coordinate_t> moves;

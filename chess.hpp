@@ -25,7 +25,7 @@ struct piece_t
     {
     }
     coordinate_t position;
-    bool have_moved = false;
+    bool has_moved = false;
     drawing_params params;
     virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const = 0;
     virtual void draw() const
@@ -264,7 +264,7 @@ struct game_t
         }
         piece->position.x = x;
         piece->position.y = y;
-        piece->have_moved = true;
+        piece->has_moved = true;
     }
     void delete_current_piece()
     {

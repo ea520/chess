@@ -47,6 +47,8 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
             game->white_turn = !game->white_turn;
             return;
         }
+
+        game->promote = false;
         if (game->white_turn)
             game->current_piece = game->get_white(x, y);
         else
@@ -75,7 +77,6 @@ void APIENTRY glDebugOutput(GLenum source,
                             const void *userParam);
 int main()
 {
-    glfwSetErrorCallback(error_callback);
     if (!glfwInit())
         return 1;
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -95,10 +96,13 @@ int main()
     glfwSetMouseButtonCallback(window, mouse_button_callback);
 
     {
+#ifndef NDEBUG
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glfwSetErrorCallback(error_callback);
         glDebugMessageCallback(glDebugOutput, nullptr);
         glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+#endif
     }
 
     glfwMakeContextCurrent(window);
@@ -111,6 +115,7 @@ int main()
     std::array<uint8_t, 4> brown{0xd2, 0x69, 0x1e, 0xff};
     std::array<uint8_t, 4> white{0xff, 0xff, 0xff, 0xff};
     std::array<uint8_t, 4> blue_transparent{0x05, 0x10, 0xff, 0x88};
+    std::array<uint8_t, 4> yellow_transparent{0xff, 0xee, 0x05, 0x88};
     std::array<std::array<std::array<uint8_t, 4>, board_width>, board_height> pixels;
     for (unsigned j = 0; j < board_height; j++)
         for (unsigned i = 0; i < board_width; i++)
@@ -119,7 +124,8 @@ int main()
         }
 
     drawing_params board = setup_square(pixels.data(), board_width, board_height, 2.f, GL_NEAREST);
-    drawing_params square = setup_square(blue_transparent.data(), 1, 1, 0.25f, GL_NEAREST);
+    drawing_params blue_square = setup_square(blue_transparent.data(), 1, 1, 0.25f, GL_NEAREST);
+    drawing_params yellow_square = setup_square(yellow_transparent.data(), 1, 1, 0.25f, GL_NEAREST);
     game_t game;
     glfwSetWindowUserPointer(window, &game);
 
@@ -133,22 +139,23 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 330");
     while (!glfwWindowShouldClose(window))
     {
-        // glfwPollEvents();
         glfwWaitEvents();
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
         if (game.promote)
         {
-            ImGui::Begin(game.white_turn ? "White pawn promotion" : "Black pawn promotion");
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+            ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+
+            ImGui::Begin(game.white_turn ? "White pawn promotion" : "Black pawn promotion", nullptr, flags);
             int e = -1;
             ImGui::RadioButton("Queen", &e, 0);
-            ImGui::SameLine();
+            // ImGui::SameLine();
             ImGui::RadioButton("Rook", &e, 1);
-            ImGui::SameLine();
+            // ImGui::SameLine();
             ImGui::RadioButton("Bishop", &e, 2);
-            ImGui::SameLine();
+            // ImGui::SameLine();
             ImGui::RadioButton("Knight", &e, 3);
             if (e != -1)
             {
@@ -175,12 +182,13 @@ int main()
                 game.delete_current_piece();
                 game.promote = false;
                 game.white_turn = !game.white_turn;
+                game.moves = {};
             }
 
             ImGui::End();
+            ImGui::Render();
         }
 
-        ImGui::Render();
         glViewport(0, 0, width, height);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -189,10 +197,16 @@ int main()
         game.draw();
         for (coordinate_t position : game.moves)
         {
-            square.draw(position.x, position.y);
+            blue_square.draw(position.x, position.y);
+        }
+        if (game.current_piece)
+        {
+            yellow_square.draw(game.current_piece->position.x, game.current_piece->position.y);
         }
 
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        if (game.promote)
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         glfwSwapBuffers(window);
     }
     ImGui_ImplOpenGL3_Shutdown();

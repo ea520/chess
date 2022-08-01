@@ -171,6 +171,7 @@ int main()
                     assert(false);
                     break;
                 }
+                array.back()->has_moved = false;
                 game.delete_current_piece();
                 game.promote = false;
                 game.white_turn = !game.white_turn;

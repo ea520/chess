@@ -25,6 +25,7 @@ struct piece_t
     {
     }
     coordinate_t position;
+    bool have_moved = false;
     drawing_params params;
     virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const = 0;
     virtual void draw() const
@@ -32,6 +33,8 @@ struct piece_t
         params.draw(position.x, position.y);
     };
     inline virtual bool ispawn() const { return false; }
+    inline virtual bool isrook() const { return false; }
+    inline virtual bool isking() const { return false; }
 };
 struct pawn : public piece_t
 {
@@ -76,6 +79,7 @@ struct rook : public piece_t
         position = {x, y};
     }
     virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
+    inline virtual bool isrook() const override { return true; }
 };
 
 struct knight : public piece_t
@@ -106,6 +110,7 @@ struct king : public piece_t
         position = {x, y};
     }
     virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
+    inline virtual bool isking() const { return true; }
 };
 
 struct queen : public piece_t
@@ -205,10 +210,7 @@ struct game_t
             black_pieces.erase(std::remove_if(black_pieces.begin(), black_pieces.end(), same_pos), black_pieces.end());
         else
             white_pieces.erase(std::remove_if(white_pieces.begin(), white_pieces.end(), same_pos), white_pieces.end());
-        auto abs_diff = [](uint8_t a, uint8_t b) -> uint8_t
-        {
-            return a > b ? a - b : b - a;
-        };
+
         if (!(enpassant == coordinate_t(0, 0)))
         {
             piece_t *to_remove = nullptr;
@@ -242,8 +244,27 @@ struct game_t
         {
             enpassant = {0, 0};
         }
+        auto abs_diff = [](uint8_t a, uint8_t b) -> uint8_t
+        {
+            return a > b ? a - b : b - a;
+        };
+        if (piece->isking() && abs_diff(x, piece->position.x) > 1)
+        {
+            // castling
+            if (x == 3)
+            {
+                piece_t *_rook = get(1, y);
+                _rook->position.x = 4;
+            }
+            if (x == 7)
+            {
+                piece_t *_rook = get(8, y);
+                _rook->position.x = 6;
+            }
+        }
         piece->position.x = x;
         piece->position.y = y;
+        piece->have_moved = true;
     }
     void delete_current_piece()
     {

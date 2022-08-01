@@ -302,6 +302,53 @@ std::vector<coordinate_t> king::available_moves(const game_t &game, bool white, 
             }
         }
     }
+    if (!has_moved)
+    {
+        uint8_t y = white ? 1 : 8;
+        // rooks start on column 1 or 8
+        uint8_t rook_initial_x[2] = {1, 8};
+
+        // for castling left, column [2, 5) must be empty
+        // for castling right, column [6, 8) must be empty
+        uint8_t intermediate_bounds[2][2] = {{2, 5}, {6, 8}};
+        for (unsigned i = 0; i < 2; i++)
+        {
+            const piece_t *castle_candidate = nullptr;
+            if (white)
+                castle_candidate = game.get_white(rook_initial_x[i], y);
+            else
+                castle_candidate = game.get_black(rook_initial_x[i], y);
+
+            if (castle_candidate && castle_candidate->isrook() && !castle_candidate->has_moved)
+            {
+                bool all_empty = true;
+                uint8_t lower = intermediate_bounds[i][0];
+                uint8_t upper = intermediate_bounds[i][1];
+                for (int i = lower; i < upper; i++)
+                {
+                    all_empty = all_empty && !game.get(i, y);
+                }
+                if (all_empty)
+                    ret.emplace_back(lower + 1, y);
+            }
+        }
+
+        // if (white)
+        //     castle_candidate = game.get_white(8, y);
+        // else
+        //     castle_candidate = game.get_black(8, y);
+
+        // if (castle_candidate && castle_candidate->isrook() && !castle_candidate->has_moved)
+        // {
+        //     bool all_empty = true;
+        //     for (int i = 6; i < 8; i++)
+        //     {
+        //         all_empty = all_empty && !game.get(i, y);
+        //     }
+        //     if (all_empty)
+        //         ret.emplace_back(7, y);
+        // }
+    }
 
     return ret;
 }

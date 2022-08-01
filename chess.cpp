@@ -20,14 +20,15 @@ std::vector<coordinate_t> pawn::available_moves(const game_t &game, bool white, 
                 ret.emplace_back(coordinate_t(position.x, position.y + 2));
             }
         }
-
+        piece_t *candidate = game.get_black(position.x + 1, position.y + 1);
         // take forward and right
-        if (position.y < 8 && position.x < 8 && game.get_black(position.x + 1, position.y + 1))
+        if (position.y < 8 && position.x < 8 && candidate && !candidate->isking())
         {
             ret.emplace_back(coordinate_t(position.x + 1, position.y + 1));
         }
+        candidate = game.get_black(position.x - 1, position.y + 1);
         // take forward and left
-        if (position.y < 8 && position.x > 1 && game.get_black(position.x - 1, position.y + 1))
+        if (position.y < 8 && position.x > 1 && candidate && !candidate->isking())
         {
             ret.emplace_back(coordinate_t(position.x - 1, position.y + 1));
         }
@@ -47,16 +48,19 @@ std::vector<coordinate_t> pawn::available_moves(const game_t &game, bool white, 
         }
 
         // take forward and right
-        if (position.y > 1 && position.x < 8 && game.get_white(position.x + 1, position.y - 1))
+        piece_t *candidate = game.get_white(position.x + 1, position.y - 1);
+        if (position.y > 1 && position.x < 8 && candidate && !candidate->isking())
         {
             ret.emplace_back(coordinate_t(position.x + 1, position.y - 1));
         }
+        candidate = game.get_white(position.x - 1, position.y - 1);
         // take forward and left
-        if (position.y > 1 && position.x > 1 && game.get_white(position.x - 1, position.y - 1))
+        if (position.y > 1 && position.x > 1 && candidate && !candidate->isking())
         {
             ret.emplace_back(coordinate_t(position.x - 1, position.y - 1));
         }
     }
+
     auto abs_diff = [](uint8_t a, uint8_t b) -> uint8_t
     {
         return a > b ? a - b : b - a;
@@ -90,9 +94,17 @@ std::vector<coordinate_t> knight::available_moves(const game_t &game, bool white
         if (in_board(newx, newy))
         {
             if (white && !game.get_white(newx, newy))
-                ret.emplace_back(newx, newy);
+            {
+                piece_t *potential_king = game.get_black(newx, newy);
+                if (!potential_king || !potential_king->isking())
+                    ret.emplace_back(newx, newy);
+            }
             else if (!white && !game.get_black(newx, newy))
-                ret.emplace_back(newx, newy);
+            {
+                piece_t *potential_king = game.get_white(newx, newy);
+                if (!potential_king || !potential_king->isking())
+                    ret.emplace_back(newx, newy);
+            }
         }
     }
     return ret;
@@ -117,12 +129,14 @@ std::vector<coordinate_t> bishop::available_moves(const game_t &game, bool white
             newy += increment[1];
             if (in_board(newx, newy))
             {
-                bool is_black = game.get_black(newx, newy) != nullptr;
-                bool is_white = game.get_white(newx, newy) != nullptr;
+                piece_t *black_piece_to_take = game.get_black(newx, newy);
+                piece_t *white_piece_to_take = game.get_white(newx, newy);
+                bool is_black = black_piece_to_take != nullptr;
+                bool is_white = white_piece_to_take != nullptr;
                 bool is_free = !is_black && !is_white;
                 if (is_free)
                     ret.emplace_back(newx, newy);
-                else if (white && is_black)
+                else if (white && is_black && !black_piece_to_take->isking())
                 {
                     // you can take the piece
                     ret.emplace_back(newx, newy);
@@ -136,7 +150,7 @@ std::vector<coordinate_t> bishop::available_moves(const game_t &game, bool white
                 {
                     break;
                 }
-                else // black piece potentially taking a white piece
+                else if (!white && is_white && !white_piece_to_take->isking())
                 {
                     ret.emplace_back(newx, newy);
                     break;
@@ -171,12 +185,14 @@ std::vector<coordinate_t> rook::available_moves(const game_t &game, bool white, 
             newy += increment[1];
             if (in_board(newx, newy))
             {
-                bool is_black = game.get_black(newx, newy) != nullptr;
-                bool is_white = game.get_white(newx, newy) != nullptr;
+                piece_t *black_piece_to_take = game.get_black(newx, newy);
+                piece_t *white_piece_to_take = game.get_white(newx, newy);
+                bool is_black = black_piece_to_take != nullptr;
+                bool is_white = white_piece_to_take != nullptr;
                 bool is_free = !is_black && !is_white;
                 if (is_free)
                     ret.emplace_back(newx, newy);
-                else if (white && is_black)
+                else if (white && is_black && !black_piece_to_take->isking())
                 {
                     // you can take the piece
                     ret.emplace_back(newx, newy);
@@ -190,7 +206,7 @@ std::vector<coordinate_t> rook::available_moves(const game_t &game, bool white, 
                 {
                     break;
                 }
-                else // black piece potentially taking a white piece
+                else if (!white && is_white && !white_piece_to_take->isking())
                 {
                     ret.emplace_back(newx, newy);
                     break;
@@ -229,12 +245,14 @@ std::vector<coordinate_t> queen::available_moves(const game_t &game, bool white,
             newy += increment[1];
             if (in_board(newx, newy))
             {
-                bool is_black = game.get_black(newx, newy) != nullptr;
-                bool is_white = game.get_white(newx, newy) != nullptr;
+                piece_t *black_piece_to_take = game.get_black(newx, newy);
+                piece_t *white_piece_to_take = game.get_white(newx, newy);
+                bool is_black = black_piece_to_take != nullptr;
+                bool is_white = white_piece_to_take != nullptr;
                 bool is_free = !is_black && !is_white;
                 if (is_free)
                     ret.emplace_back(newx, newy);
-                else if (white && is_black)
+                else if (white && is_black && !black_piece_to_take->isking())
                 {
                     // you can take the piece
                     ret.emplace_back(newx, newy);
@@ -248,7 +266,7 @@ std::vector<coordinate_t> queen::available_moves(const game_t &game, bool white,
                 {
                     break;
                 }
-                else // black piece potentially taking a white piece
+                else if (!white && is_white && !white_piece_to_take->isking())
                 {
                     ret.emplace_back(newx, newy);
                     break;
@@ -285,6 +303,7 @@ std::vector<coordinate_t> king::available_moves(const game_t &game, bool white, 
         newy += increment[1];
         if (in_board(newx, newy))
         {
+            // needn't check that a king isn't taking another king
             bool is_black = game.get_black(newx, newy) != nullptr;
             bool is_white = game.get_white(newx, newy) != nullptr;
             bool is_free = !is_black && !is_white;
@@ -302,6 +321,7 @@ std::vector<coordinate_t> king::available_moves(const game_t &game, bool white, 
             }
         }
     }
+
     if (!has_moved)
     {
         uint8_t y = white ? 1 : 8;
@@ -332,22 +352,6 @@ std::vector<coordinate_t> king::available_moves(const game_t &game, bool white, 
                     ret.emplace_back(lower + 1, y);
             }
         }
-
-        // if (white)
-        //     castle_candidate = game.get_white(8, y);
-        // else
-        //     castle_candidate = game.get_black(8, y);
-
-        // if (castle_candidate && castle_candidate->isrook() && !castle_candidate->has_moved)
-        // {
-        //     bool all_empty = true;
-        //     for (int i = 6; i < 8; i++)
-        //     {
-        //         all_empty = all_empty && !game.get(i, y);
-        //     }
-        //     if (all_empty)
-        //         ret.emplace_back(7, y);
-        // }
     }
 
     return ret;

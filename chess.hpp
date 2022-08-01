@@ -199,7 +199,7 @@ struct game_t
         for (const auto &piece : black_pieces)
             piece->draw();
     }
-    void update_position(piece_t *piece, uint8_t x, uint8_t y)
+    void update_position(uint8_t x, uint8_t y)
     {
         // if there's a piece already there, remove it
         auto same_pos = [x, y](const std::unique_ptr<piece_t> &candidate)
@@ -219,7 +219,7 @@ struct game_t
                 return to_remove == candidate.get();
             };
 
-            if (piece->ispawn() && enpassant.x == x)
+            if (current_piece->ispawn() && enpassant.x == x)
             {
                 if (white_turn && y == enpassant.y + 1)
                 {
@@ -235,7 +235,7 @@ struct game_t
                 }
             }
         }
-        if (piece->ispawn() && ((piece->position.y == 2 && y == 4) || (piece->position.y == 7 && y == 5)))
+        if (current_piece->ispawn() && ((current_piece->position.y == 2 && y == 4) || (current_piece->position.y == 7 && y == 5)))
         // pawn just moved 2 places. save it's position
         {
             enpassant = {x, y};
@@ -248,7 +248,7 @@ struct game_t
         {
             return a > b ? a - b : b - a;
         };
-        if (piece->isking() && abs_diff(x, piece->position.x) > 1)
+        if (current_piece->isking() && abs_diff(x, current_piece->position.x) > 1)
         {
             // castling
             if (x == 3)
@@ -262,9 +262,9 @@ struct game_t
                 _rook->position.x = 6;
             }
         }
-        piece->position.x = x;
-        piece->position.y = y;
-        piece->has_moved = true;
+        current_piece->position.x = x;
+        current_piece->position.y = y;
+        current_piece->has_moved = true;
     }
     void delete_current_piece()
     {
@@ -286,4 +286,6 @@ struct game_t
     bool white_turn = true;
     piece_t *current_piece = nullptr;
     bool promote = false;
+    bool black_check = false;
+    bool white_check = false;
 };

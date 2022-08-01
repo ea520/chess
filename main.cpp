@@ -24,27 +24,25 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
         glfwGetCursorPos(window, &xpos, &ypos);
         uint8_t x = uint8_t(xpos / width * 8.) + 1;
         uint8_t y = uint8_t(9 - (ypos / height * 8.));
-        // printf("%c%d\n", 'A' + char(x - 1), 8 - int(y));
-        // fflush(stdout);
         if (game->current_piece && std::find(game->moves.begin(), game->moves.end(), coordinate_t{x, y}) != game->moves.end())
         {
+            game->moves = {};
+            game->update_position(x, y);
             if (game->current_piece->ispawn() && game->white_turn && y == 8)
             {
-                game->update_position(game->current_piece, x, y);
+
                 game->promote = true;
-                return;
             }
             else if (game->current_piece->ispawn() && !game->white_turn && y == 1)
             {
-                game->update_position(game->current_piece, x, y);
+
                 game->promote = true;
-                return;
             }
             else
+            {
                 game->promote = false;
-            game->update_position(game->current_piece, x, y);
-            game->moves = {};
-            game->white_turn = !game->white_turn;
+                game->white_turn = !game->white_turn;
+            }
             return;
         }
 
@@ -116,6 +114,7 @@ int main()
     std::array<uint8_t, 4> white{0xff, 0xff, 0xff, 0xff};
     std::array<uint8_t, 4> blue_transparent{0x05, 0x10, 0xff, 0x88};
     std::array<uint8_t, 4> yellow_transparent{0xff, 0xee, 0x05, 0x88};
+    std::array<uint8_t, 4> red_transparent{0xff, 0x05, 0x05, 0x88};
     std::array<std::array<std::array<uint8_t, 4>, board_width>, board_height> pixels;
     for (unsigned j = 0; j < board_height; j++)
         for (unsigned i = 0; i < board_width; i++)
@@ -126,6 +125,7 @@ int main()
     drawing_params board = setup_square(pixels.data(), board_width, board_height, 2.f, GL_NEAREST);
     drawing_params blue_square = setup_square(blue_transparent.data(), 1, 1, 0.25f, GL_NEAREST);
     drawing_params yellow_square = setup_square(yellow_transparent.data(), 1, 1, 0.25f, GL_NEAREST);
+    drawing_params red_square = setup_square(red_transparent.data(), 1, 1, 0.25f, GL_NEAREST);
     game_t game;
     glfwSetWindowUserPointer(window, &game);
 
@@ -163,24 +163,35 @@ int main()
                 switch (e)
                 {
                 case 0:
-                    array.emplace_back(new queen(game.current_piece->position.x, game.current_piece->position.y, game.white_turn));
+                    array.emplace_back(new queen(0, 0, game.white_turn));
                     break;
                 case 1:
-                    array.emplace_back(new rook(game.current_piece->position.x, game.current_piece->position.y, game.white_turn));
+                    array.emplace_back(new rook(0, 0, game.white_turn));
                     break;
                 case 2:
-                    array.emplace_back(new bishop(game.current_piece->position.x, game.current_piece->position.y, game.white_turn));
+                    array.emplace_back(new bishop(0, 0, game.white_turn));
                     break;
                 case 3:
-                    array.emplace_back(new knight(game.current_piece->position.x, game.current_piece->position.y, game.white_turn));
+                    array.emplace_back(new knight(0, 0, game.white_turn));
                     break;
                 default:
                     assert(false);
                     break;
                 }
-                array.back()->has_moved = false;
+                coordinate_t new_pos = game.current_piece->position;
+
+                // delete the pawn
                 game.delete_current_piece();
+
+                // get the promoted piece (initially in an invalid place)
+                game.current_piece = array.back().get();
+
+                // put the promoted piece in the right place
+                game.update_position(new_pos.x, new_pos.y);
+
+                // no longer waiting to see which piece to promote
                 game.promote = false;
+
                 game.white_turn = !game.white_turn;
                 game.moves = {};
             }
@@ -202,6 +213,28 @@ int main()
         if (game.current_piece)
         {
             yellow_square.draw(game.current_piece->position.x, game.current_piece->position.y);
+        }
+        auto find_king = [](const std::vector<std::unique_ptr<piece_t>> &pieces) -> piece_t *
+        {
+            for (const auto &piece : pieces)
+            {
+                if (piece->isking())
+                    return piece.get();
+            }
+            return nullptr;
+        };
+
+        static piece_t *black_king = find_king(game.black_pieces);
+        static piece_t *white_king = find_king(game.white_pieces);
+
+        if (game.black_check)
+        {
+            red_square.draw(black_king->position.x, black_king->position.y);
+        }
+
+        if (game.white_check)
+        {
+            red_square.draw(white_king->position.x, white_king->position.y);
         }
 
         if (game.promote)

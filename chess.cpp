@@ -3,9 +3,14 @@ bool in_board(int8_t x, int8_t y)
 {
     return x <= 8 && x >= 1 && y <= 8 && y >= 1;
 }
-
-std::vector<coordinate_t> pawn::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
+uint8_t abs_diff(uint8_t a, uint8_t b)
 {
+    return a > b ? a - b : b - a;
+};
+std::vector<coordinate_t> pawn::available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check) const
+{
+    if (check)
+        *check = false;
     std::vector<coordinate_t> ret;
     if (white)
     {
@@ -61,10 +66,6 @@ std::vector<coordinate_t> pawn::available_moves(const game_t &game, bool white, 
         }
     }
 
-    auto abs_diff = [](uint8_t a, uint8_t b) -> uint8_t
-    {
-        return a > b ? a - b : b - a;
-    };
     if (enpassant.y == position.y && abs_diff(position.x, enpassant.x) == 1)
     {
         if (white)
@@ -72,11 +73,24 @@ std::vector<coordinate_t> pawn::available_moves(const game_t &game, bool white, 
         else
             ret.emplace_back(coordinate_t(enpassant.x, enpassant.y - 1));
     }
+    if (check)
+    {
+        if (white)
+        {
+            *check = (game.black_king->position.y == position.y + 1 && abs_diff(game.black_king->position.x, position.x) == 1);
+        }
+        else
+        {
+            *check = (game.white_king->position.y == position.y - 1 && abs_diff(game.white_king->position.x, position.x) == 1);
+        }
+    }
     return ret;
 }
 
-std::vector<coordinate_t> knight::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
+std::vector<coordinate_t> knight::available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check) const
 {
+    if (check)
+        *check = false;
     const static std::array<std::array<int8_t, 2>, 8> knight_displacements = {
         std::array<int8_t, 2>{+1, +2},
         std::array<int8_t, 2>{+1, -2},
@@ -98,6 +112,8 @@ std::vector<coordinate_t> knight::available_moves(const game_t &game, bool white
                 piece_t *potential_king = game.get_black(newx, newy);
                 if (!potential_king || !potential_king->isking())
                     ret.emplace_back(newx, newy);
+                if (potential_king && potential_king->isking() && check)
+                    *check = true;
             }
             else if (!white && !game.get_black(newx, newy))
             {
@@ -110,10 +126,11 @@ std::vector<coordinate_t> knight::available_moves(const game_t &game, bool white
     return ret;
 }
 
-std::vector<coordinate_t> bishop::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
+std::vector<coordinate_t> bishop::available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check) const
 {
+    if (check)
+        *check = false;
     std::vector<coordinate_t> ret;
-
     static constexpr std::array<std::array<int8_t, 2>, 4> bishop_displacements =
         {
             std::array<int8_t, 2>{1, 1},
@@ -136,10 +153,13 @@ std::vector<coordinate_t> bishop::available_moves(const game_t &game, bool white
                 bool is_free = !is_black && !is_white;
                 if (is_free)
                     ret.emplace_back(newx, newy);
-                else if (white && is_black && !black_piece_to_take->isking())
+                else if (white && is_black)
                 {
-                    // you can take the piece
-                    ret.emplace_back(newx, newy);
+                    if (!black_piece_to_take->isking())
+                        // you can take the piece
+                        ret.emplace_back(newx, newy);
+                    else if (check)
+                        *check = true;
                     break;
                 }
                 else if (white && is_white)
@@ -150,9 +170,12 @@ std::vector<coordinate_t> bishop::available_moves(const game_t &game, bool white
                 {
                     break;
                 }
-                else if (!white && is_white && !white_piece_to_take->isking())
+                else if (!white && is_white)
                 {
-                    ret.emplace_back(newx, newy);
+                    if (!white_piece_to_take->isking())
+                        ret.emplace_back(newx, newy);
+                    else if (check)
+                        *check = true;
                     break;
                 }
             }
@@ -166,8 +189,10 @@ std::vector<coordinate_t> bishop::available_moves(const game_t &game, bool white
     return ret;
 }
 
-std::vector<coordinate_t> rook::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
+std::vector<coordinate_t> rook::available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check) const
 {
+    if (check)
+        *check = false;
     std::vector<coordinate_t> ret;
 
     static constexpr std::array<std::array<int8_t, 2>, 4> bishop_displacements =
@@ -192,10 +217,13 @@ std::vector<coordinate_t> rook::available_moves(const game_t &game, bool white, 
                 bool is_free = !is_black && !is_white;
                 if (is_free)
                     ret.emplace_back(newx, newy);
-                else if (white && is_black && !black_piece_to_take->isking())
+                else if (white && is_black)
                 {
-                    // you can take the piece
-                    ret.emplace_back(newx, newy);
+                    if (!black_piece_to_take->isking())
+                        // you can take the piece
+                        ret.emplace_back(newx, newy);
+                    else if (check)
+                        *check = true;
                     break;
                 }
                 else if (white && is_white)
@@ -206,9 +234,12 @@ std::vector<coordinate_t> rook::available_moves(const game_t &game, bool white, 
                 {
                     break;
                 }
-                else if (!white && is_white && !white_piece_to_take->isking())
+                else if (!white && is_white)
                 {
-                    ret.emplace_back(newx, newy);
+                    if (!white_piece_to_take->isking())
+                        ret.emplace_back(newx, newy);
+                    else if (check)
+                        *check = true;
                     break;
                 }
             }
@@ -222,8 +253,10 @@ std::vector<coordinate_t> rook::available_moves(const game_t &game, bool white, 
     return ret;
 }
 
-std::vector<coordinate_t> queen::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
+std::vector<coordinate_t> queen::available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check) const
 {
+    if (check)
+        *check = false;
     std::vector<coordinate_t> ret;
 
     static constexpr std::array<std::array<int8_t, 2>, 8> bishop_displacements =
@@ -252,10 +285,13 @@ std::vector<coordinate_t> queen::available_moves(const game_t &game, bool white,
                 bool is_free = !is_black && !is_white;
                 if (is_free)
                     ret.emplace_back(newx, newy);
-                else if (white && is_black && !black_piece_to_take->isking())
+                else if (white && is_black)
                 {
-                    // you can take the piece
-                    ret.emplace_back(newx, newy);
+                    if (!black_piece_to_take->isking())
+                        // you can take the piece
+                        ret.emplace_back(newx, newy);
+                    else if (check)
+                        *check = true;
                     break;
                 }
                 else if (white && is_white)
@@ -266,9 +302,12 @@ std::vector<coordinate_t> queen::available_moves(const game_t &game, bool white,
                 {
                     break;
                 }
-                else if (!white && is_white && !white_piece_to_take->isking())
+                else if (!white && is_white)
                 {
-                    ret.emplace_back(newx, newy);
+                    if (!white_piece_to_take->isking())
+                        ret.emplace_back(newx, newy);
+                    else if (check)
+                        *check = true;
                     break;
                 }
             }
@@ -282,8 +321,10 @@ std::vector<coordinate_t> queen::available_moves(const game_t &game, bool white,
     return ret;
 }
 
-std::vector<coordinate_t> king::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
+std::vector<coordinate_t> king::available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check) const
 {
+    if (check)
+        *check = false;
     std::vector<coordinate_t> ret;
 
     static constexpr std::array<std::array<int8_t, 2>, 8> bishop_displacements =

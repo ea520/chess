@@ -214,25 +214,16 @@ int main()
         {
             yellow_square.draw(game.current_piece->position.x, game.current_piece->position.y);
         }
-        auto find_king = [](const std::vector<std::unique_ptr<piece_t>> &pieces) -> piece_t *
-        {
-            for (const auto &piece : pieces)
-            {
-                if (piece->isking())
-                    return piece.get();
-            }
-            return nullptr;
-        };
 
-        static piece_t *black_king = find_king(game.black_pieces);
-        static piece_t *white_king = find_king(game.white_pieces);
+        static piece_t *black_king = game.black_king;
+        static piece_t *white_king = game.white_king;
 
         if (game.black_check)
         {
             red_square.draw(black_king->position.x, black_king->position.y);
         }
 
-        if (game.white_check)
+        else if (game.white_check)
         {
             red_square.draw(white_king->position.x, white_king->position.y);
         }

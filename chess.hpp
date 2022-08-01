@@ -27,7 +27,7 @@ struct piece_t
     coordinate_t position;
     bool has_moved = false;
     drawing_params params;
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const = 0;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check = nullptr) const = 0;
     virtual void draw() const
     {
         params.draw(position.x, position.y);
@@ -48,7 +48,8 @@ struct pawn : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check = nullptr) const override;
+
     inline virtual bool ispawn() const override { return true; }
 };
 struct bishop : public piece_t
@@ -63,7 +64,7 @@ struct bishop : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check = nullptr) const override;
 };
 
 struct rook : public piece_t
@@ -78,7 +79,8 @@ struct rook : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check = nullptr) const override;
+
     inline virtual bool isrook() const override { return true; }
 };
 
@@ -94,7 +96,7 @@ struct knight : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check = nullptr) const override;
 };
 
 struct king : public piece_t
@@ -109,7 +111,8 @@ struct king : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check = nullptr) const override;
+
     inline virtual bool isking() const { return true; }
 };
 
@@ -125,7 +128,7 @@ struct queen : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check = nullptr) const override;
 };
 
 struct game_t
@@ -156,6 +159,9 @@ struct game_t
         black_pieces.emplace_back(new queen(4, 8, false));
         white_pieces.emplace_back(new king(5, 1, true));
         black_pieces.emplace_back(new king(5, 8, false));
+
+        white_king = white_pieces.back().get();
+        black_king = black_pieces.back().get();
     }
     // do not delete the piece
     piece_t *get(uint8_t x, uint8_t y) const
@@ -265,6 +271,7 @@ struct game_t
         current_piece->position.x = x;
         current_piece->position.y = y;
         current_piece->has_moved = true;
+        update_check();
     }
     void delete_current_piece()
     {
@@ -279,6 +286,37 @@ struct game_t
             black_pieces.erase(std::remove_if(black_pieces.begin(), black_pieces.end(), same_piece), black_pieces.end());
         current_piece = nullptr;
     }
+    void update_check()
+    {
+        update_black_check();
+        update_white_check();
+    }
+    // Check if white is in check just after black has moved
+    void update_white_check()
+    {
+        for (const auto &piece : black_pieces)
+        {
+            for (coordinate_t move : piece->available_moves(*this, false, enpassant, &white_check))
+            {
+                if (white_check)
+                    return;
+            }
+        }
+        white_check = false;
+    }
+    // Check if black is in check just after white has moved
+    void update_black_check()
+    {
+        for (const auto &piece : white_pieces)
+        {
+            for (coordinate_t move : piece->available_moves(*this, true, enpassant, &black_check))
+            {
+                if (black_check)
+                    return;
+            }
+        }
+        black_check = false;
+    }
     std::vector<std::unique_ptr<piece_t>> white_pieces;
     std::vector<std::unique_ptr<piece_t>> black_pieces;
     coordinate_t enpassant{0, 0};
@@ -288,4 +326,6 @@ struct game_t
     bool promote = false;
     bool black_check = false;
     bool white_check = false;
+    piece_t *white_king;
+    piece_t *black_king;
 };

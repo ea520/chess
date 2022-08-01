@@ -4,7 +4,7 @@ bool in_board(int8_t x, int8_t y)
     return x <= 8 && x >= 1 && y <= 8 && y >= 1;
 }
 
-std::vector<coordinate_t> pawn::available_moves(const game_t &game, bool white) const
+std::vector<coordinate_t> pawn::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
 {
     std::vector<coordinate_t> ret;
     if (white)
@@ -57,10 +57,21 @@ std::vector<coordinate_t> pawn::available_moves(const game_t &game, bool white) 
             ret.emplace_back(coordinate_t(position.x - 1, position.y - 1));
         }
     }
+    auto abs_diff = [](uint8_t a, uint8_t b) -> uint8_t
+    {
+        return a > b ? a - b : b - a;
+    };
+    if (enpassant.y == position.y && abs_diff(position.x, enpassant.x) == 1)
+    {
+        if (white)
+            ret.emplace_back(coordinate_t(enpassant.x, enpassant.y + 1));
+        else
+            ret.emplace_back(coordinate_t(enpassant.x, enpassant.y - 1));
+    }
     return ret;
 }
 
-std::vector<coordinate_t> knight::available_moves(const game_t &game, bool white) const
+std::vector<coordinate_t> knight::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
 {
     const static std::array<std::array<int8_t, 2>, 8> knight_displacements = {
         std::array<int8_t, 2>{+1, +2},
@@ -87,7 +98,7 @@ std::vector<coordinate_t> knight::available_moves(const game_t &game, bool white
     return ret;
 }
 
-std::vector<coordinate_t> bishop::available_moves(const game_t &game, bool white) const
+std::vector<coordinate_t> bishop::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
 {
     std::vector<coordinate_t> ret;
 
@@ -141,7 +152,7 @@ std::vector<coordinate_t> bishop::available_moves(const game_t &game, bool white
     return ret;
 }
 
-std::vector<coordinate_t> rook::available_moves(const game_t &game, bool white) const
+std::vector<coordinate_t> rook::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
 {
     std::vector<coordinate_t> ret;
 
@@ -195,7 +206,7 @@ std::vector<coordinate_t> rook::available_moves(const game_t &game, bool white) 
     return ret;
 }
 
-std::vector<coordinate_t> queen::available_moves(const game_t &game, bool white) const
+std::vector<coordinate_t> queen::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
 {
     std::vector<coordinate_t> ret;
 
@@ -253,7 +264,7 @@ std::vector<coordinate_t> queen::available_moves(const game_t &game, bool white)
     return ret;
 }
 
-std::vector<coordinate_t> king::available_moves(const game_t &game, bool white) const
+std::vector<coordinate_t> king::available_moves(const game_t &game, bool white, coordinate_t enpassant) const
 {
     std::vector<coordinate_t> ret;
 

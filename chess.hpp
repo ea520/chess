@@ -26,11 +26,12 @@ struct piece_t
     }
     coordinate_t position;
     drawing_params params;
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white) const = 0;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const = 0;
     virtual void draw() const
     {
         params.draw(position.x, position.y);
     };
+    inline virtual bool ispawn() const { return false; }
 };
 struct pawn : public piece_t
 {
@@ -44,7 +45,8 @@ struct pawn : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
+    inline virtual bool ispawn() const override { return true; }
 };
 struct bishop : public piece_t
 {
@@ -58,7 +60,7 @@ struct bishop : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
 };
 
 struct rook : public piece_t
@@ -73,7 +75,7 @@ struct rook : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
 };
 
 struct knight : public piece_t
@@ -88,7 +90,7 @@ struct knight : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
 };
 
 struct king : public piece_t
@@ -103,7 +105,7 @@ struct king : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
 };
 
 struct queen : public piece_t
@@ -118,7 +120,7 @@ struct queen : public piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white) const override;
+    virtual std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const override;
 };
 
 struct game_t
@@ -126,29 +128,29 @@ struct game_t
     game_t()
     {
         for (int i = 1; i <= 8; i++)
-            white.emplace_back(new pawn(i, 2, true));
+            white_pieces.emplace_back(new pawn(i, 2, true));
         for (int i = 1; i <= 8; i++)
-            black.emplace_back(new pawn(i, 7, false));
+            black_pieces.emplace_back(new pawn(i, 7, false));
 
         for (int i : {1, 8})
-            white.emplace_back(new rook(i, 1, true));
+            white_pieces.emplace_back(new rook(i, 1, true));
         for (int i : {1, 8})
-            black.emplace_back(new rook(i, 8, false));
+            black_pieces.emplace_back(new rook(i, 8, false));
 
         for (int i : {2, 7})
-            white.emplace_back(new knight(i, 1, true));
+            white_pieces.emplace_back(new knight(i, 1, true));
         for (int i : {2, 7})
-            black.emplace_back(new knight(i, 8, false));
+            black_pieces.emplace_back(new knight(i, 8, false));
 
         for (int i : {3, 6})
-            white.emplace_back(new bishop(i, 1, true));
+            white_pieces.emplace_back(new bishop(i, 1, true));
         for (int i : {3, 6})
-            black.emplace_back(new bishop(i, 8, false));
+            black_pieces.emplace_back(new bishop(i, 8, false));
 
-        white.emplace_back(new queen(4, 1, true));
-        black.emplace_back(new queen(4, 8, false));
-        white.emplace_back(new king(5, 1, true));
-        black.emplace_back(new king(5, 8, false));
+        white_pieces.emplace_back(new queen(4, 1, true));
+        black_pieces.emplace_back(new queen(4, 8, false));
+        white_pieces.emplace_back(new king(5, 1, true));
+        black_pieces.emplace_back(new king(5, 8, false));
     }
     // do not delete the piece
     piece_t *get(uint8_t x, uint8_t y) const
@@ -168,7 +170,7 @@ struct game_t
     }
     piece_t *get_white(uint8_t x, uint8_t y) const
     {
-        for (const auto &piece : white)
+        for (const auto &piece : white_pieces)
         {
             if (piece->position.x == x && piece->position.y == y)
                 return piece.get();
@@ -177,7 +179,7 @@ struct game_t
     }
     piece_t *get_black(uint8_t x, uint8_t y) const
     {
-        for (const auto &piece : black)
+        for (const auto &piece : black_pieces)
         {
             if (piece->position.x == x && piece->position.y == y)
                 return piece.get();
@@ -187,9 +189,9 @@ struct game_t
 
     void draw()
     {
-        for (const auto &piece : white)
+        for (const auto &piece : white_pieces)
             piece->draw();
-        for (const auto &piece : black)
+        for (const auto &piece : black_pieces)
             piece->draw();
     }
     void update_position(piece_t *piece, uint8_t x, uint8_t y)
@@ -199,11 +201,54 @@ struct game_t
         {
             return coordinate_t{x, y} == candidate->position;
         };
-        black.erase(std::remove_if(black.begin(), black.end(), same_pos), black.end());
-        white.erase(std::remove_if(white.begin(), white.end(), same_pos), white.end());
+        if (white_turn)
+            black_pieces.erase(std::remove_if(black_pieces.begin(), black_pieces.end(), same_pos), black_pieces.end());
+        else
+            white_pieces.erase(std::remove_if(white_pieces.begin(), white_pieces.end(), same_pos), white_pieces.end());
+        auto abs_diff = [](uint8_t a, uint8_t b) -> uint8_t
+        {
+            return a > b ? a - b : b - a;
+        };
+        if (!(enpassant == coordinate_t(0, 0)))
+        {
+            piece_t *to_remove = nullptr;
+            auto same_piece = [&to_remove](const std::unique_ptr<piece_t> &candidate)
+            {
+                return to_remove == candidate.get();
+            };
+
+            if (piece->ispawn() && enpassant.x == x)
+            {
+                if (white_turn && y == enpassant.y + 1)
+                {
+                    to_remove = get(enpassant.x, enpassant.y);
+                    assert(to_remove);
+                    black_pieces.erase(std::remove_if(black_pieces.begin(), black_pieces.end(), same_piece), black_pieces.end());
+                }
+                else if (!white_turn && y == enpassant.y - 1)
+                {
+                    to_remove = get(enpassant.x, enpassant.y);
+                    assert(to_remove);
+                    white_pieces.erase(std::remove_if(white_pieces.begin(), white_pieces.end(), same_piece), white_pieces.end());
+                }
+            }
+        }
+        if (piece->ispawn() && ((piece->position.y == 2 && y == 4) || (piece->position.y == 7 && y == 5)))
+        // pawn just moved 2 places. save it's position
+        {
+            enpassant = {x, y};
+        }
+        else
+        {
+            enpassant = {0, 0};
+        }
         piece->position.x = x;
         piece->position.y = y;
     }
-    std::vector<std::unique_ptr<piece_t>> white;
-    std::vector<std::unique_ptr<piece_t>> black;
+    std::vector<std::unique_ptr<piece_t>> white_pieces;
+    std::vector<std::unique_ptr<piece_t>> black_pieces;
+    coordinate_t enpassant{0, 0};
+    std::vector<coordinate_t> moves;
+    bool white_turn = true;
+    piece_t *current_piece = nullptr;
 };

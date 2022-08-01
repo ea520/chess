@@ -8,9 +8,7 @@
 #include "chess.hpp"
 constexpr int width = 1000;
 constexpr int height = width;
-std::vector<coordinate_t> moves;
-bool white_turn = true;
-piece_t *current_piece = nullptr;
+
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
@@ -22,23 +20,23 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
         game_t *game = (game_t *)glfwGetWindowUserPointer(window);
         // printf("%c%d\n", 'A' + char(x - 1), 8 - int(y));
         // fflush(stdout);
-        if (current_piece && std::find(moves.begin(), moves.end(), coordinate_t{x, y}) != moves.end())
+        if (game->current_piece && std::find(game->moves.begin(), game->moves.end(), coordinate_t{x, y}) != game->moves.end())
         {
-            game->update_position(current_piece, x, y);
-            moves = {};
-            white_turn = !white_turn;
+            game->update_position(game->current_piece, x, y);
+            game->moves = {};
+            game->white_turn = !game->white_turn;
             return;
         }
-        if (white_turn)
-            current_piece = game->get_white(x, y);
+        if (game->white_turn)
+            game->current_piece = game->get_white(x, y);
         else
-            current_piece = game->get_black(x, y);
-        if (current_piece)
+            game->current_piece = game->get_black(x, y);
+        if (game->current_piece)
         {
-            moves = current_piece->available_moves(*game, white_turn);
+            game->moves = game->current_piece->available_moves(*game, game->white_turn, game->enpassant);
             return;
         }
-        moves = {};
+        game->moves = {};
     }
 }
 
@@ -112,7 +110,7 @@ int main()
 
         board.draw();
         game.draw();
-        for (coordinate_t position : moves)
+        for (coordinate_t position : game.moves)
         {
             square.draw(position.x, position.y);
         }

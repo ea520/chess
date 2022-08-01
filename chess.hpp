@@ -5,7 +5,7 @@
 #include <memory>
 #include <algorithm>
 #include "rendering.hpp"
-#include "stb_image.h"
+#include <stb_image.hpp>
 struct coordinate_t
 {
     coordinate_t(uint8_t x, uint8_t y) : x(x), y(y)
@@ -245,10 +245,24 @@ struct game_t
         piece->position.x = x;
         piece->position.y = y;
     }
+    void delete_current_piece()
+    {
+        auto same_piece = [this](const std::unique_ptr<piece_t> &candidate)
+        {
+            return current_piece == candidate.get();
+        };
+
+        if (white_turn)
+            white_pieces.erase(std::remove_if(white_pieces.begin(), white_pieces.end(), same_piece), white_pieces.end());
+        else
+            black_pieces.erase(std::remove_if(black_pieces.begin(), black_pieces.end(), same_piece), black_pieces.end());
+        current_piece = nullptr;
+    }
     std::vector<std::unique_ptr<piece_t>> white_pieces;
     std::vector<std::unique_ptr<piece_t>> black_pieces;
     coordinate_t enpassant{0, 0};
     std::vector<coordinate_t> moves;
     bool white_turn = true;
     piece_t *current_piece = nullptr;
+    bool promote = false;
 };

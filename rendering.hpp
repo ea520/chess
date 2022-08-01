@@ -48,7 +48,7 @@ private:
 class texture
 {
 public:
-    texture(GLuint shaderProgram, const char *texture_name, void *pixels, int width, int height, GLenum interpolation = GL_NEAREST);
+    texture(GLuint shaderProgram, const char *texture_name, void *pixels, int width, int height, GLenum interpolation = GL_LINEAR);
     texture() : id(-1){};
     void bind() const;
 
@@ -66,4 +66,4 @@ struct drawing_params
     void draw(uint8_t x = 1, uint8_t y = 1) const;
 };
 
-drawing_params setup_square(void *image, int width, int height, float size);
+drawing_params setup_square(void *image, int width, int height, float size, GLenum interpolation = GL_LINEAR);

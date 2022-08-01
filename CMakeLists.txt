@@ -8,7 +8,9 @@ find_package(GLEW REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(OpenGL)
 
+file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/*.cpp)
+file(GLOB_RECURSE DEPENDENCY_FILES ${PROJECT_SOURCE_DIR}/dependencies/*.cpp)
+add_executable(chess ${SRC_FILES} ${DEPENDENCY_FILES})
+target_include_directories(chess PRIVATE "dependencies" "dependencies/imgui/backends" "dependencies/imgui")
 
-add_executable(chess main.cpp rendering.cpp chess.cpp stb_image.cpp)
-
-target_link_libraries(chess PRIVATE glfw GLEW::GLEW OpenGL::GL)
+target_link_libraries(chess PRIVATE glfw GLEW::GLEW OpenGL::GL ${CMAKE_DL_LIBS})

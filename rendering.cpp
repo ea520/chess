@@ -147,7 +147,7 @@ void set_layout(GLuint shaderProgram)
     glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void *)(2 * sizeof(GLfloat)));
 }
 
-drawing_params setup_square(void *image, int width, int height, float size)
+drawing_params setup_square(void *image, int width, int height, float size, GLenum interpolation)
 {
     vao VAO;
     square_vbo vbo(size);
@@ -156,6 +156,6 @@ drawing_params setup_square(void *image, int width, int height, float size)
 
     GLuint shaderProgram = square_texture_shader.get_id();
     set_layout(shaderProgram);
-    texture tex(shaderProgram, "tex", image, width, height);
+    texture tex(shaderProgram, "tex", image, width, height, interpolation);
     return drawing_params{VAO, vbo, ebo, square_texture_shader, tex};
 };

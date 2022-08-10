@@ -12,8 +12,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-constexpr int width = 1000;
-constexpr int height = width;
+constexpr int window_width = 800;
+constexpr int window_height = window_width;
 
 void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
 {
@@ -22,38 +22,48 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
     {
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
-        uint8_t x = uint8_t(xpos / width * 8.) + 1;
-        uint8_t y = uint8_t(9 - (ypos / height * 8.));
-        // printf("%c%d\n", 'A' + char(x - 1), 8 - int(y));
-        // fflush(stdout);
-        if (game->current_piece && std::find(game->moves.begin(), game->moves.end(), coordinate_t{x, y}) != game->moves.end())
+        uint8_t x = uint8_t(xpos / window_width * 8.) + 1;
+        uint8_t y = uint8_t(9 - (ypos / window_height * 8.));
+
+        if (game->get_current_piece() && std::find(game->moves.begin(), game->moves.end(), coordinate_t{x, y}) != game->moves.end())
         {
-            if (game->current_piece->ispawn() && game->white_turn && y == 8)
+            if (game->get_current_piece().ispawn() && game->white_turn && y == 8)
             {
-                game->update_position(game->current_piece, x, y);
+                game->move(x, y);
                 game->promote = true;
                 return;
             }
-            else if (game->current_piece->ispawn() && !game->white_turn && y == 1)
+            else if (game->get_current_piece().ispawn() && !game->white_turn && y == 1)
             {
-                game->update_position(game->current_piece, x, y);
+                game->move(x, y);
                 game->promote = true;
                 return;
             }
             else
                 game->promote = false;
-            game->update_position(game->current_piece, x, y);
+
+            game->move(x, y);
+            game->black_check = game->in_check(false);
+            game->white_check = game->in_check(true);
             game->moves = {};
             game->white_turn = !game->white_turn;
+            if (game->black_check && game->in_check_mate(false))
+            {
+                printf("BLACK CHECKMATE\n");
+            }
+            else if (game->white_check && game->in_check_mate(true))
+            {
+                printf("WHITE CHECKMATE\n");
+            }
             return;
         }
         if (game->white_turn)
-            game->current_piece = game->get_white(x, y);
+            game->set_current_piece(game->get_white(x, y));
         else
-            game->current_piece = game->get_black(x, y);
-        if (game->current_piece)
+            game->set_current_piece(game->get_black(x, y));
+        if (game->get_current_piece())
         {
-            game->moves = game->current_piece->available_moves(*game, game->white_turn, game->enpassant);
+            game->moves = game->get_current_piece().available_moves(*game, game->white_turn, game->enpassant);
             return;
         }
         game->moves = {};
@@ -83,7 +93,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    GLFWwindow *window = glfwCreateWindow(width, height, "Chess", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(window_width, window_height, "Chess", NULL, NULL);
     glfwMakeContextCurrent(window);
     glewInit();
 
@@ -111,6 +121,7 @@ int main()
     std::array<uint8_t, 4> brown{0xd2, 0x69, 0x1e, 0xff};
     std::array<uint8_t, 4> white{0xff, 0xff, 0xff, 0xff};
     std::array<uint8_t, 4> blue_transparent{0x05, 0x10, 0xff, 0x88};
+    std::array<uint8_t, 4> red_transparent{0xff, 0x00, 0x00, 0x88};
     std::array<std::array<std::array<uint8_t, 4>, board_width>, board_height> pixels;
     for (unsigned j = 0; j < board_height; j++)
         for (unsigned i = 0; i < board_width; i++)
@@ -119,7 +130,8 @@ int main()
         }
 
     drawing_params board = setup_square(pixels.data(), board_width, board_height, 2.f, GL_NEAREST);
-    drawing_params square = setup_square(blue_transparent.data(), 1, 1, 0.25f, GL_NEAREST);
+    drawing_params blue_square = setup_square(blue_transparent.data(), 1, 1, 0.25f, GL_NEAREST);
+    drawing_params red_square = setup_square(red_transparent.data(), 1, 1, 0.25f, GL_NEAREST);
     game_t game;
     glfwSetWindowUserPointer(window, &game);
 
@@ -150,30 +162,32 @@ int main()
             ImGui::RadioButton("Bishop", &e, 2);
             ImGui::SameLine();
             ImGui::RadioButton("Knight", &e, 3);
+            piece_t piece;
             if (e != -1)
             {
-                auto &array = game.white_turn ? game.white_pieces : game.black_pieces;
                 switch (e)
                 {
                 case 0:
-                    array.emplace_back(new queen(game.current_piece->position.x, game.current_piece->position.y, game.white_turn));
+                    piece = piece_t(game.get_current_piece().get_position().x, game.get_current_piece().get_position().y, game.white_turn, piece_type::queen);
                     break;
                 case 1:
-                    array.emplace_back(new rook(game.current_piece->position.x, game.current_piece->position.y, game.white_turn));
+                    piece = piece_t(game.get_current_piece().get_position().x, game.get_current_piece().get_position().y, game.white_turn, piece_type::rook);
                     break;
                 case 2:
-                    array.emplace_back(new bishop(game.current_piece->position.x, game.current_piece->position.y, game.white_turn));
+                    piece = piece_t(game.get_current_piece().get_position().x, game.get_current_piece().get_position().y, game.white_turn, piece_type::bishop);
                     break;
                 case 3:
-                    array.emplace_back(new knight(game.current_piece->position.x, game.current_piece->position.y, game.white_turn));
+                    piece = piece_t(game.get_current_piece().get_position().x, game.get_current_piece().get_position().y, game.white_turn, piece_type::knight);
                     break;
                 default:
                     assert(false);
                     break;
                 }
-                array.back()->has_moved = false;
-                game.delete_current_piece();
+
+                game.get(piece.get_position()) = piece;
                 game.promote = false;
+                game.black_check = game.in_check(false);
+                game.white_check = game.in_check(true);
                 game.white_turn = !game.white_turn;
             }
 
@@ -181,7 +195,7 @@ int main()
         }
 
         ImGui::Render();
-        glViewport(0, 0, width, height);
+        glViewport(0, 0, window_width, window_height);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -189,8 +203,12 @@ int main()
         game.draw();
         for (coordinate_t position : game.moves)
         {
-            square.draw(position.x, position.y);
+            blue_square.draw(position.x, position.y);
         }
+        if (game.white_check)
+            red_square.draw(game.white_king.x, game.white_king.y);
+        if (game.black_check)
+            red_square.draw(game.black_king.x, game.black_king.y);
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);

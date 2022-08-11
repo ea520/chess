@@ -41,7 +41,7 @@ struct piece_t
     piece_t() : position({0, 0}), type(piece_type::invalid)
     {
     }
-    piece_t(uint8_t x, uint8_t y, bool white, piece_type t, bool *check = nullptr) : position({x, y}), type(t), white(white)
+    piece_t(uint8_t x, uint8_t y, bool white, piece_type t) : position({x, y}), type(t), white(white)
     {
         std::string filename;
         stbi_set_flip_vertically_on_load(!white);
@@ -77,7 +77,7 @@ struct piece_t
         stbi_image_free(data);
         position = {x, y};
     }
-    std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant, bool *check = nullptr) const;
+    std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const;
 
     void draw() const
     {

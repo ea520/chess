@@ -4,7 +4,7 @@ bool in_board(int8_t x, int8_t y)
     return x <= 8 && x >= 1 && y <= 8 && y >= 1;
 }
 
-std::vector<coordinate_t> filter_check(game_t game, const std::vector<coordinate_t> &moves, bool white)
+std::vector<coordinate_t> filter_check(const game_t &game, const std::vector<coordinate_t> &moves, bool white)
 {
     std::vector<coordinate_t> ret;
     for (auto move : moves)
@@ -359,7 +359,7 @@ std::vector<coordinate_t> piece_t::available_moves(const game_t &game, bool whit
 {
 
     std::vector<coordinate_t> ret;
-    if (game.get_current_piece().isinvalid())
+    if (isinvalid())
         return {};
     switch (this->type)
     {
@@ -503,6 +503,9 @@ bool game_t::in_check(bool white) const
                 case piece_type::rook:
                     rooks.push_back(piece.get_position());
                     break;
+                case piece_type::king:
+                    kings.push_back(piece.get_position());
+                    break;
 
                 case piece_type::bishop:
                     bishops.push_back(piece.get_position());
@@ -514,9 +517,6 @@ bool game_t::in_check(bool white) const
 
                 case piece_type::knight:
                     knights.push_back(piece.get_position());
-                    break;
-                case piece_type::king:
-                    kings.push_back(piece.get_position());
                     break;
 
                 default:
@@ -655,5 +655,22 @@ bool game_t::in_check(bool white) const
 }
 bool game_t::in_check_mate(bool white) const
 {
-    return false;
+    if (!in_check(white))
+        return false;
+    std::vector<piece_t> pieces;
+    if (white)
+        pieces = get_white_pieces();
+    else
+        pieces = get_black_pieces();
+
+    for (const auto &piece : pieces)
+    {
+        game_t g = *this;
+        assert(g.in_check(white));
+        g.set_current_piece(piece);
+        auto moves = piece.available_moves(g, white, enpassant);
+        if (moves.size())
+            return false;
+    }
+    return true;
 }

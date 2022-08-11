@@ -46,15 +46,13 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
             game->black_check = game->in_check(false);
             game->white_check = game->in_check(true);
             game->moves = {};
+
+            if (game->in_check_mate(!game->white_turn))
+            {
+                printf("CHECKMATE %s WIN!\n", game->white_turn ? "WHITE" : "BLACK");
+                fflush(0);
+            }
             game->white_turn = !game->white_turn;
-            if (game->black_check && game->in_check_mate(false))
-            {
-                printf("BLACK CHECKMATE\n");
-            }
-            else if (game->white_check && game->in_check_mate(true))
-            {
-                printf("WHITE CHECKMATE\n");
-            }
             return;
         }
         if (game->white_turn)
@@ -83,6 +81,7 @@ void APIENTRY glDebugOutput(GLenum source,
                             GLsizei length,
                             const char *message,
                             const void *userParam);
+
 int main()
 {
     glfwSetErrorCallback(error_callback);
@@ -151,9 +150,10 @@ int main()
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        auto flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
         if (game.promote)
         {
-            ImGui::Begin(game.white_turn ? "White pawn promotion" : "Black pawn promotion");
+            ImGui::Begin(game.white_turn ? "White pawn promotion" : "Black pawn promotion", nullptr, flags);
             int e = -1;
             ImGui::RadioButton("Queen", &e, 0);
             ImGui::SameLine();
@@ -193,7 +193,17 @@ int main()
 
             ImGui::End();
         }
+        if (game.in_check_mate(game.white_turn))
+        {
+            ImGui::Begin(game.white_turn ? "Black wins" : "White wins", nullptr, flags);
 
+            auto windowWidth = ImGui::GetWindowSize().x;
+            auto textWidth = ImGui::CalcTextSize("CHECKMATE").x;
+
+            ImGui::SetCursorPosX((windowWidth - textWidth) * 0.5f);
+            ImGui::TextColored({0., 1., 0., 1.}, "CHECKMATE");
+            ImGui::End();
+        }
         ImGui::Render();
         glViewport(0, 0, window_width, window_height);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);

@@ -41,6 +41,7 @@ struct piece_t
     piece_t() : position({0, 0}), type(piece_type::invalid)
     {
     }
+
     piece_t(uint8_t x, uint8_t y, bool white, piece_type t) : position({x, y}), type(t), white(white)
     {
         std::string filename;
@@ -120,6 +121,24 @@ struct game_t
     piece_t &get(uint8_t x, uint8_t y);
     piece_t get(coordinate_t p) const { return get(p.x, p.y); }
     piece_t &get(coordinate_t p) { return get(p.x, p.y); }
+    std::vector<piece_t> get_white_pieces() const
+    {
+        std::vector<piece_t> ret;
+        for (const auto &row : board)
+            for (const auto &piece : row)
+                if (!piece.isinvalid() && piece.iswhite())
+                    ret.push_back(piece);
+        return ret;
+    }
+    std::vector<piece_t> get_black_pieces() const
+    {
+        std::vector<piece_t> ret;
+        for (const auto &row : board)
+            for (const auto &piece : row)
+                if (!piece.isinvalid() && !piece.iswhite())
+                    ret.push_back(piece);
+        return ret;
+    }
 
     piece_t get_black(uint8_t x, uint8_t y) const
     {

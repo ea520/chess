@@ -64,6 +64,9 @@ void vao::bind() const
 {
     glBindVertexArray(id);
 }
+const GLuint square_ebo::elements[6] = {
+    0, 1, 2,
+    2, 3, 0};
 
 square_ebo::square_ebo()
 {

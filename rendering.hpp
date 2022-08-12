@@ -31,9 +31,7 @@ public:
 
 private:
     GLuint ebo;
-    constexpr static GLuint elements[] = {
-        0, 1, 2,
-        2, 3, 0};
+    const static GLuint elements[6];
 };
 
 class square_vbo

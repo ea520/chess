@@ -1,5 +1,6 @@
 #include <GL/glew.h>
 #include "rendering.hpp"
+
 // Shader sources
 const GLchar *vertexSource = R"glsl(
     #version 330 core
@@ -103,7 +104,7 @@ void square_vbo::bind() const
     glBindBuffer(GL_ARRAY_BUFFER, id);
 }
 
-texture::texture(GLuint shaderProgram, const char *texture_name, void *pixels, int width, int height, GLenum interpolation)
+texture::texture(GLuint shaderProgram, const char *texture_name, const void *pixels, int width, int height, GLenum interpolation)
 {
     // Load textures
     glGenTextures(1, &id);
@@ -147,14 +148,18 @@ void set_layout(GLuint shaderProgram)
     glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void *)(2 * sizeof(GLfloat)));
 }
 
-drawing_params setup_square(void *image, int width, int height, float size, GLenum interpolation)
+drawing_params setup_square(const void *image, int width, int height, float size, GLenum interpolation)
 {
     vao VAO;
     square_vbo vbo(size);
-    square_ebo ebo;
-    shader square_texture_shader(vertexSource, fragmentSource);
 
-    GLuint shaderProgram = square_texture_shader.get_id();
+    static square_ebo ebo; // same for every square
+    ebo.bind();
+
+    static shader square_texture_shader(vertexSource, fragmentSource); // same shader for every square
+
+    static GLuint shaderProgram = square_texture_shader.get_id();
+
     set_layout(shaderProgram);
     texture tex(shaderProgram, "tex", image, width, height, interpolation);
     return drawing_params{VAO, vbo, ebo, square_texture_shader, tex};

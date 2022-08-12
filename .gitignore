@@ -4,5 +4,5 @@
 *.pdb
 *.dll
 *.out
-application/chess
-application/imgui.ini
+application/
+images.hpp

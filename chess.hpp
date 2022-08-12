@@ -8,6 +8,7 @@
 #include <stb_image.hpp>
 #include <iostream>
 #include <array>
+#include "images.hpp"
 struct coordinate_t
 {
     coordinate_t(uint8_t x, uint8_t y) : x(x), y(y)
@@ -44,38 +45,55 @@ struct piece_t
 
     piece_t(uint8_t x, uint8_t y, bool white, piece_type t) : position({x, y}), type(t), white(white)
     {
-        std::string filename;
-        stbi_set_flip_vertically_on_load(!white);
-        filename = white ? "white-" : "black-";
+        std::string name;
+        // stbi_set_flip_vertically_on_load(!white);
+        const std::vector<unsigned char> *data;
+        name = white ? "white-" : "black-";
         switch (t)
         {
         case piece_type::pawn:
-            filename += "pawn";
+            name += "pawn";
+            data = white ? &white_pawn_png : &black_pawn_png;
             break;
         case piece_type::rook:
-            filename += "rook";
+            name += "rook";
+            data = white ? &white_rook_png : &black_rook_png;
             break;
         case piece_type::king:
-            filename += "king";
+            name += "king";
+            data = white ? &white_king_png : &black_king_png;
             break;
         case piece_type::queen:
-            filename += "queen";
+            name += "queen";
+            data = white ? &white_queen_png : &black_queen_png;
             break;
         case piece_type::bishop:
-            filename += "bishop";
+            name += "bishop";
+            data = white ? &white_bishop_png : &black_bishop_png;
             break;
         case piece_type::knight:
-            filename += "knight";
+            name += "knight";
+            data = white ? &white_knight_png : &black_knight_png;
             break;
         default:
             break;
         }
-        filename += ".png";
-        int w, h;
 
-        auto data = stbi_load(filename.data(), &w, &h, nullptr, 4);
-        params = setup_square(data, w, h, 0.25f);
-        stbi_image_free(data);
+        int w, h;
+        static std::unordered_map<std::string, drawing_params> piece_cache;
+        try
+        {
+            params = piece_cache.at(name);
+        }
+        catch (std::out_of_range &e)
+        {
+
+            // auto image = stbi_load((name + ".png").data(), &w, &h, nullptr, 4);
+            auto image = stbi_load_from_memory(data->data(), data->size(), &w, &h, nullptr, 4);
+            params = setup_square(image, w, h, 0.25f);
+            stbi_image_free(image);
+            piece_cache[name] = params;
+        }
         position = {x, y};
     }
     std::vector<coordinate_t> available_moves(const game_t &game, bool white, coordinate_t enpassant) const;

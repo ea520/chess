@@ -84,7 +84,11 @@ void APIENTRY glDebugOutput(GLenum source,
 
 int main()
 {
+
+#ifndef NDEBUG
     glfwSetErrorCallback(error_callback);
+#endif
+
     if (!glfwInit())
         return 1;
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -103,12 +107,14 @@ int main()
     }
     glfwSetMouseButtonCallback(window, mouse_button_callback);
 
-    {
-        glEnable(GL_DEBUG_OUTPUT);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        glDebugMessageCallback(glDebugOutput, nullptr);
-        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
-    }
+#ifndef NDEBUG
+
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(glDebugOutput, nullptr);
+    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+
+#endif
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
@@ -142,9 +148,9 @@ int main()
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
+
     while (!glfwWindowShouldClose(window))
     {
-        // glfwPollEvents();
         glfwWaitEvents();
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -232,7 +238,7 @@ int main()
     glfwTerminate();
     exit(EXIT_SUCCESS);
 }
-
+#ifndef NDEBUG
 void APIENTRY glDebugOutput(GLenum source,
                             GLenum type,
                             unsigned int id,
@@ -321,3 +327,4 @@ void APIENTRY glDebugOutput(GLenum source,
     std::cout << std::endl;
     std::cout << std::endl;
 }
+#endif
